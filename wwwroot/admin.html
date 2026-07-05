@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamCo Admin — Analytics & Knowledge Base</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f1b33 0%, #1a2f52 100%);
+    min-height: 100vh; color: #e8edf5; padding-bottom: 40px;
+  }
+  header {
+    padding: 18px 28px; display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .brand { font-size: 1.25rem; font-weight: 700; }
+  .brand span { color: #4fa3ff; }
+  nav a { color: #8fc2ff; text-decoration: none; font-size: .9rem; }
+  main { width: min(1000px, 94vw); margin: 24px auto; display: grid; gap: 24px; }
+  .card {
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+    border-radius: 16px; padding: 22px;
+  }
+  h2 { font-size: 1.05rem; margin-bottom: 4px; color: #cfe0f7; }
+  .sub { font-size: .8rem; color: #93a5c4; margin-bottom: 16px; }
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stat {
+    flex: 1; min-width: 130px; background: rgba(0,0,0,.22); border-radius: 12px; padding: 14px; text-align: center;
+  }
+  .stat .num { font-size: 1.7rem; font-weight: 700; color: #4fa3ff; }
+  .stat .lbl { font-size: .75rem; color: #93a5c4; margin-top: 2px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: .85rem; }
+  .bar-row .label { width: 130px; color: #cfe0f7; text-transform: capitalize; }
+  .bar-row .bar { height: 18px; background: linear-gradient(90deg,#2f6fce,#4fa3ff); border-radius: 4px; min-width: 4px; }
+  .bar-row .count { color: #93a5c4; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.07); vertical-align: top; }
+  th { color: #93a5c4; font-weight: 600; font-size: .75rem; text-transform: uppercase; }
+  td.content { max-width: 380px; color: #b9c7dd; }
+  .tag { display: inline-block; font-size: .7rem; background: rgba(79,163,255,.15); color: #8fc2ff;
+         padding: 2px 8px; border-radius: 10px; margin: 1px 2px; }
+  button {
+    border: none; border-radius: 8px; padding: 7px 14px; cursor: pointer; font-size: .82rem; font-weight: 600;
+  }
+  .primary { background: #2f6fce; color: #fff; }
+  .primary:hover { background: #3a7de0; }
+  .danger { background: rgba(224,82,82,.16); color: #ff9d9d; border: 1px solid rgba(224,82,82,.4); }
+  .ghost { background: rgba(255,255,255,.08); color: #cfe0f7; }
+  form { display: grid; gap: 10px; margin-top: 14px; }
+  input, textarea {
+    padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15);
+    background: rgba(0,0,0,.25); color: #e8edf5; font-size: .88rem; font-family: inherit; outline: none;
+  }
+  input:focus, textarea:focus { border-color: #4fa3ff; }
+  textarea { min-height: 80px; resize: vertical; }
+  .form-row { display: flex; gap: 10px; }
+  .form-row input { flex: 1; }
+  .note { font-size: .75rem; color: #7286a8; margin-top: 10px; }
+  .path-badges span { display:inline-block; margin: 0 8px 6px 0; font-size:.78rem; padding:4px 10px;
+    border-radius:12px; background: rgba(0,0,0,.25); color:#8fc2ff; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Stream<span>Co</span> Admin</div>
+  <nav><a href="/">← Back to Chat</a></nav>
+</header>
+
+<main>
+  <div class="card">
+    <h2>AI Chat Analytics</h2>
+    <div class="sub">Every conversation is logged with automatic topic detection — most-asked topics surface here for business insights.</div>
+    <div class="stats" id="stats"></div>
+    <div class="path-badges" id="paths"></div>
+    <h2 style="margin-top:14px">Most-asked topics</h2>
+    <div id="topics" style="margin-top:10px"><span class="note">No questions asked yet — try the chat first.</span></div>
+    <h2 style="margin-top:20px">Recent questions</h2>
+    <table id="recent"><thead><tr><th>Time (UTC)</th><th>Question</th><th>Topic</th><th>Path</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Dynamic Knowledge Base</h2>
+    <div class="sub">Add, edit, or delete articles — the chatbot's answers update in seconds with zero redeployment (response cache invalidates instantly).</div>
+    <table id="articles"><thead><tr><th>ID</th><th>Title</th><th>Tags</th><th>Content</th><th></th></tr></thead><tbody></tbody></table>
+
+    <form id="articleForm">
+      <h2 id="formTitle" style="margin-top:8px">Add new article</h2>
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <input id="title" placeholder="Title" required>
+        <input id="tags" placeholder="Tags (comma separated)">
+      </div>
+      <textarea id="content" placeholder="Article content — this is the text the chatbot grounds its answers in" required></textarea>
+      <div class="form-row">
+        <button type="submit" class="primary" id="saveBtn">Add article</button>
+        <button type="button" class="ghost" id="cancelBtn" style="display:none">Cancel edit</button>
+      </div>
+    </form>
+    <div class="note">Demo note: admin endpoints are open here for easy exploration; the production system used role-based authorization.</div>
+  </div>
+</main>
+
+<script>
+async function loadAnalytics() {
+  const data = await (await fetch('/api/analytics')).json();
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><div class="num">' + data.totalMessages + '</div><div class="lbl">total messages</div></div>' +
+    (data.byPath || []).map(p =>
+      '<div class="stat"><div class="num">' + p.count + '</div><div class="lbl">' + p.path + '</div></div>').join('');
+  const topics = data.topTopics || [];
+  if (topics.length) {
+    const max = topics[0].count;
+    document.getElementById('topics').innerHTML = topics.map(t =>
+      '<div class="bar-row"><div class="label">' + t.topic + '</div>' +
+      '<div class="bar" style="width:' + (t.count / max * 320) + 'px"></div>' +
+      '<div class="count">' + t.count + '</div></div>').join('');
+  }
+  document.querySelector('#recent tbody').innerHTML = (data.recent || []).map(r =>
+    '<tr><td>' + new Date(r.at).toISOString().slice(11,19) + '</td><td>' + escapeHtml(r.question) +
+    '</td><td>' + r.topic + '</td><td>' + r.path + '</td></tr>').join('');
+}
+
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+async function loadArticles() {
+  const articles = await (await fetch('/api/articles')).json();
+  document.querySelector('#articles tbody').innerHTML = articles.map(a =>
+    '<tr><td>' + a.id + '</td><td>' + escapeHtml(a.title) + '</td>' +
+    '<td>' + (a.tags || []).map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('') + '</td>' +
+    '<td class="content">' + escapeHtml(a.content.length > 140 ? a.content.slice(0,140) + '…' : a.content) + '</td>' +
+    '<td><button class="ghost" onclick=\'startEdit(' + JSON.stringify(a).replace(/'/g, "&#39;") + ')\'>Edit</button> ' +
+    '<button class="danger" onclick="removeArticle(\'' + a.id + '\')">Delete</button></td></tr>').join('');
+}
+
+function startEdit(a) {
+  document.getElementById('editId').value = a.id;
+  document.getElementById('title').value = a.title;
+  document.getElementById('tags').value = (a.tags || []).join(', ');
+  document.getElementById('content').value = a.content;
+  document.getElementById('formTitle').textContent = 'Edit article ' + a.id;
+  document.getElementById('saveBtn').textContent = 'Save changes';
+  document.getElementById('cancelBtn').style.display = '';
+  document.getElementById('articleForm').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetForm() {
+  document.getElementById('articleForm').reset();
+  document.getElementById('editId').value = '';
+  document.getElementById('formTitle').textContent = 'Add new article';
+  document.getElementById('saveBtn').textContent = 'Add article';
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+document.getElementById('cancelBtn').addEventListener('click', resetForm);
+
+document.getElementById('articleForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = document.getElementById('editId').value;
+  const body = JSON.stringify({
+    title: document.getElementById('title').value,
+    tags: document.getElementById('tags').value,
+    content: document.getElementById('content').value
+  });
+  await fetch(id ? '/api/articles/' + id : '/api/articles', {
+    method: id ? 'PUT' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body
+  });
+  resetForm();
+  loadArticles();
+});
+
+async function removeArticle(id) {
+  if (!confirm('Delete article ' + id + '? The chatbot will stop using it immediately.')) return;
+  await fetch('/api/articles/' + id, { method: 'DELETE' });
+  loadArticles();
+}
+
+loadAnalytics();
+loadArticles();
+setInterval(loadAnalytics, 5000);
+</script>
+</body>
+</html>

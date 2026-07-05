@@ -1,8 +1,22 @@
-# Semantic Kernel RAG Demo — Customer Support Chatbot
+# ConsumerChatbot — AI-Powered Support Portal (RAG Demo)
 
-A Retrieval Augmented Generation (RAG) chatbot built with **.NET 9**, **Microsoft Semantic Kernel**, and **Azure OpenAI**, demonstrating the architecture I used to ship a live AI-powered consumer-portal chatbot serving OTT/DTH subscribers in production.
+A full-stack **RAG customer-support chatbot** built with **.NET 9**, **Microsoft Semantic Kernel**, and **Azure OpenAI**, with a live chat UI, an **AI chat analytics dashboard**, and a **dynamic knowledge base with admin CRUD and instant cache invalidation**.
 
-The demo plays a support assistant for a fictional streaming service ("StreamCo"): every answer is grounded in a knowledge base — the model is never allowed to invent policies, prices, or steps.
+This is an original demo of the architecture I designed and shipped in production as a live consumer-portal chatbot serving OTT/DTH subscribers (DishTV). It contains **no proprietary code or data** — the "StreamCo" brand, knowledge base, and content are fictional, created for this demo.
+
+## What a recruiter can see working, in one minute
+
+```bash
+dotnet run
+# open http://localhost:5000
+```
+
+No credentials needed — without Azure OpenAI keys the app runs in **offline mode** (keyword retrieval, returns the grounding article). With keys configured it does full semantic RAG with GPT-4o-mini.
+
+1. **Chat page (`/`)** — ask about plans, billing, devices. Each answer shows its *path* (fast-path / cache / rag), detected *topic*, and *source articles with relevance scores*. Ask something out of scope ("can I fly to the moon?") and watch it refuse to invent an answer — hallucination prevention in action.
+2. **Admin dashboard (`/admin.html`)** —
+   - **AI Chat Analytics:** every conversation logged with automatic topic detection; most-asked topics ranked live.
+   - **Dynamic Knowledge Base:** add or edit an article, then re-ask the related question in chat — the answer updates **in seconds, with zero redeployment**, because the response cache invalidates on every knowledge-base change.
 
 ## Architecture
 
@@ -10,73 +24,59 @@ The demo plays a support assistant for a fictional streaming service ("StreamCo"
 User question
    │
    ▼
-1. Fast-path intent router     — greetings/thanks answered instantly, no LLM call
+1. Fast-path intent router      — greetings/thanks answered instantly, no LLM call
    │
    ▼
-2. Response cache (1h TTL)     — repeated questions served without any model call
-   │
+2. Response cache (1h TTL)      — repeated questions served without any model call;
+   │                              invalidated instantly on knowledge-base edits
    ▼
-3. Retrieval                   — Azure OpenAI embeddings + cosine similarity,
-   │                             top-3 articles above a relevance threshold
+3. Retrieval                    — Azure OpenAI embeddings + cosine similarity,
+   │                              top-3 articles above a relevance threshold
+   │                              (offline fallback: keyword scoring)
    ▼
-4. Grounded generation         — context-augmented prompt to GPT-4o-mini with
-                                 strict "answer only from the articles" rules
-                                 (hallucination prevention)
+4. Grounded generation          — context-augmented prompt to GPT-4o-mini with
+   │                              strict "answer only from the articles" rules
+   ▼
+5. Analytics                    — automatic topic detection, logged per message,
+                                  powering the admin dashboard
 ```
 
-Steps 1–2 mirror the cost optimizations from the production system, where fast-path handlers and caching cut AI API costs by ~90%.
+Steps 1–2 mirror the cost engineering from the production system, where fast-path handlers and caching cut AI API costs by ~90%.
 
-## Run it
+## Full RAG mode (optional)
 
-Works out of the box **without any credentials** (offline mode: keyword retrieval, returns the best matching article):
-
-```bash
-dotnet run
-```
-
-For the full RAG experience with semantic retrieval and GPT-generated answers, set your Azure OpenAI details first:
-
-```bash
-# PowerShell
+```powershell
 $env:AZURE_OPENAI_ENDPOINT = "https://<your-resource>.openai.azure.com/"
 $env:AZURE_OPENAI_API_KEY  = "<your-key>"
 $env:AZURE_OPENAI_CHAT_DEPLOYMENT      = "gpt-4o-mini"            # default
 $env:AZURE_OPENAI_EMBEDDING_DEPLOYMENT = "text-embedding-3-small" # default
-
 dotnet run
 ```
 
-## Sample session
+## API
 
-```
-You: how many screens can I watch on at the same time?
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/chat` | Ask a question → answer, path, topic, sources with scores |
+| `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}` | Knowledge-base CRUD (persists to JSON, invalidates caches) |
+| `GET /api/analytics` | Totals, path breakdown, most-asked topics, recent questions |
 
-Bot (rag): It depends on your plan — Basic allows 1 screen, Standard allows 2,
-and Premium allows 4 simultaneous screens. (See "Managing devices and screen limits".)
-
-Sources: KB003 "Managing devices and screen limits" (0.71), KB001 "Subscription plans and pricing" (0.58)
-
-You: can I get a refund on the moon?
-
-Bot (rag): I couldn't find anything about that in our knowledge base. Please
-contact support at help.streamco.example for further assistance.
-```
+*Demo note: admin endpoints are open for easy exploration; the production system used role-based authorization (ASP.NET Core Identity).*
 
 ## Project layout
 
 | File | Purpose |
 |------|---------|
-| `Program.cs` | Startup, Azure OpenAI vs offline mode selection, chat loop |
+| `Program.cs` | Minimal-API startup, endpoints, Azure vs offline mode selection |
 | `RagChatService.cs` | The pipeline: fast-path → cache → retrieve → grounded generation |
-| `EmbeddingRetriever.cs` | Semantic retrieval (embeddings + cosine similarity) |
+| `EmbeddingRetriever.cs` | Semantic retrieval; vector index re-syncs on KB edits |
 | `KeywordRetriever.cs` | Offline fallback retrieval (token overlap) |
-| `FastPathRouter.cs` | Canned answers for trivial intents (cost/latency optimization) |
-| `ResponseCache.cs` | TTL cache keyed by normalized question |
-| `data/knowledge-base.json` | The grounding corpus (10 support articles) |
+| `KnowledgeStore.cs` | Dynamic KB with CRUD, JSON persistence, change events |
+| `ChatAnalytics.cs` | Per-message logging with topic detection |
+| `FastPathRouter.cs` / `ResponseCache.cs` | Cost/latency optimizations |
+| `wwwroot/` | Chat UI and admin dashboard (vanilla JS, no build step) |
+| `Dockerfile` | One-command container build for cloud deployment |
 
-## Key ideas demonstrated
+## Deploy (free tier)
 
-- **Grounding & hallucination prevention** — the system prompt restricts answers to retrieved articles; out-of-scope questions get an honest "I don't know" instead of a confident guess.
-- **Relevance thresholding** — articles below a similarity floor are discarded, so weak matches never pollute the prompt.
-- **Cost engineering** — trivial intents and repeated questions never reach the model.
-- **Graceful degradation** — the same pipeline runs offline with keyword retrieval when no credentials are configured.
+Works on any container host — e.g. [Render](https://render.com): *New → Web Service → connect this repo → Docker*. The app honors the `PORT` environment variable automatically.

@@ -5,7 +5,7 @@ namespace SemanticKernelRagDemo;
 /// end-to-end without Azure OpenAI credentials. With credentials configured,
 /// <see cref="EmbeddingRetriever"/> is used instead.
 /// </summary>
-public sealed class KeywordRetriever(IReadOnlyList<KnowledgeArticle> articles) : IRetriever
+public sealed class KeywordRetriever(KnowledgeStore store) : IRetriever
 {
     private static readonly char[] Separators = [' ', ',', '.', '?', '!', ':', ';', '(', ')', '\'', '"', '/', '\n', '\r', '\t'];
 
@@ -30,7 +30,7 @@ public sealed class KeywordRetriever(IReadOnlyList<KnowledgeArticle> articles) :
         if (queryTokens.Count == 0)
             return Task.FromResult<IReadOnlyList<RetrievedArticle>>([]);
 
-        var results = articles
+        var results = store.Snapshot
             .Select(article =>
             {
                 var articleTokens = Tokenize(article.EmbeddingText + ' ' + string.Join(' ', article.Tags));

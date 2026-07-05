@@ -7,25 +7,25 @@ namespace SemanticKernelRagDemo;
 /// </summary>
 public static class FastPathRouter
 {
-    private static readonly (string[] Triggers, string Response)[] Intents =
+    private static readonly (string Intent, string[] Triggers, string Response)[] Intents =
     [
-        (["hi", "hello", "hey", "namaste", "good morning", "good evening"],
+        ("greeting", ["hi", "hello", "hey", "namaste", "good morning", "good evening"],
          "Hello! I'm the StreamCo support assistant. Ask me anything about plans, billing, devices, or troubleshooting."),
-        (["thanks", "thank you", "thx", "great, thanks"],
+        ("thanks", ["thanks", "thank you", "thx", "great, thanks"],
          "You're welcome! Is there anything else I can help you with?"),
-        (["bye", "goodbye", "see you"],
+        ("goodbye", ["bye", "goodbye", "see you"],
          "Goodbye! Feel free to come back any time you need help."),
-        (["what can you do", "help", "who are you"],
+        ("capabilities", ["what can you do", "help", "who are you"],
          "I answer questions about StreamCo subscriptions, billing, devices, downloads, parental controls, and troubleshooting — all grounded in our official knowledge base."),
     ];
 
-    public static string? TryHandle(string userMessage)
+    public static (string Intent, string Response)? TryHandle(string userMessage)
     {
         var normalized = userMessage.Trim().ToLowerInvariant().TrimEnd('!', '.', '?');
-        foreach (var (triggers, response) in Intents)
+        foreach (var (intent, triggers, response) in Intents)
         {
             if (triggers.Any(t => normalized == t || (normalized.Length <= 25 && normalized.StartsWith(t))))
-                return response;
+                return (intent, response);
         }
         return null;
     }

@@ -3,43 +3,59 @@ using Microsoft.SemanticKernel.Embeddings;
 namespace SemanticKernelRagDemo;
 
 /// <summary>
-/// Semantic retriever: embeds every knowledge-base article once at startup,
-/// then ranks articles against the query embedding by cosine similarity.
+/// Semantic retriever: embeds knowledge-base articles and ranks them against
+/// the query embedding by cosine similarity. The vector index syncs lazily with
+/// the knowledge store, so admin edits are reflected on the next question
+/// without a restart.
 /// </summary>
-public sealed class EmbeddingRetriever : IRetriever
+public sealed class EmbeddingRetriever(KnowledgeStore store, ITextEmbeddingGenerationService embeddings) : IRetriever
 {
-    private readonly ITextEmbeddingGenerationService _embeddings;
-    private readonly List<(KnowledgeArticle Article, ReadOnlyMemory<float> Vector)> _index;
-
-    private EmbeddingRetriever(ITextEmbeddingGenerationService embeddings,
-        List<(KnowledgeArticle, ReadOnlyMemory<float>)> index)
-    {
-        _embeddings = embeddings;
-        _index = index;
-    }
-
-    public static async Task<EmbeddingRetriever> CreateAsync(
-        IReadOnlyList<KnowledgeArticle> articles, ITextEmbeddingGenerationService embeddings)
-    {
-        var vectors = await embeddings.GenerateEmbeddingsAsync(
-            articles.Select(a => a.EmbeddingText).ToList());
-
-        var index = articles.Zip(vectors, (article, vector) => (article, vector)).ToList();
-        return new EmbeddingRetriever(embeddings, index);
-    }
+    private readonly Dictionary<string, (string Text, ReadOnlyMemory<float> Vector)> _index = new();
+    private readonly SemaphoreSlim _sync = new(1, 1);
 
     public double MinRelevanceScore => 0.45;
 
     public async Task<IReadOnlyList<RetrievedArticle>> RetrieveAsync(string query, int topK)
     {
-        var queryVector = (await _embeddings.GenerateEmbeddingsAsync([query]))[0];
+        var articles = store.Snapshot;
+        await SyncIndexAsync(articles);
 
-        return _index
-            .Select(entry => new RetrievedArticle(entry.Article,
-                VectorMath.CosineSimilarity(queryVector, entry.Vector)))
+        var queryVector = (await embeddings.GenerateEmbeddingsAsync([query]))[0];
+
+        return articles
+            .Where(a => _index.ContainsKey(a.Id))
+            .Select(a => new RetrievedArticle(a, VectorMath.CosineSimilarity(queryVector, _index[a.Id].Vector)))
             .Where(r => r.Score >= MinRelevanceScore)
             .OrderByDescending(r => r.Score)
             .Take(topK)
             .ToList();
+    }
+
+    private async Task SyncIndexAsync(IReadOnlyList<KnowledgeArticle> articles)
+    {
+        var stale = articles
+            .Where(a => !_index.TryGetValue(a.Id, out var entry) || entry.Text != a.EmbeddingText)
+            .ToList();
+        var deletedIds = _index.Keys.Except(articles.Select(a => a.Id)).ToList();
+        if (stale.Count == 0 && deletedIds.Count == 0)
+            return;
+
+        await _sync.WaitAsync();
+        try
+        {
+            foreach (var id in deletedIds)
+                _index.Remove(id);
+
+            if (stale.Count > 0)
+            {
+                var vectors = await embeddings.GenerateEmbeddingsAsync(stale.Select(a => a.EmbeddingText).ToList());
+                foreach (var (article, vector) in stale.Zip(vectors))
+                    _index[article.Id] = (article.EmbeddingText, vector);
+            }
+        }
+        finally
+        {
+            _sync.Release();
+        }
     }
 }

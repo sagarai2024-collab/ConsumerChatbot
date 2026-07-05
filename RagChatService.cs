@@ -4,13 +4,14 @@ using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace SemanticKernelRagDemo;
 
-public sealed record ChatResult(string Answer, IReadOnlyList<RetrievedArticle> Sources, string Path);
+public sealed record ChatResult(string Answer, IReadOnlyList<RetrievedArticle> Sources, string Path, string Topic);
 
 /// <summary>
 /// The RAG pipeline: fast-path intents -> response cache -> retrieval ->
-/// context-augmented prompt -> grounded generation.
+/// context-augmented prompt -> grounded generation. Every conversation is
+/// logged with automatic topic detection for the analytics dashboard.
 /// </summary>
-public sealed class RagChatService(IRetriever retriever, IChatCompletionService? chat)
+public sealed class RagChatService(IRetriever retriever, IChatCompletionService? chat, ChatAnalytics analytics)
 {
     private const int TopK = 3;
 
@@ -27,15 +28,25 @@ public sealed class RagChatService(IRetriever retriever, IChatCompletionService?
         - When the answer comes from an article, you may mention the article title for reference.
         """;
 
+    /// <summary>Called when the knowledge base changes: cached answers may be stale.</summary>
+    public void InvalidateCache() => _cache.Clear();
+
     public async Task<ChatResult> AskAsync(string question)
     {
+        var result = await AnswerAsync(question);
+        analytics.Record(question, result.Topic, result.Path);
+        return result;
+    }
+
+    private async Task<ChatResult> AnswerAsync(string question)
+    {
         // 1. Fast path: trivial intents never reach the LLM.
-        if (FastPathRouter.TryHandle(question) is { } canned)
-            return new ChatResult(canned, [], "fast-path");
+        if (FastPathRouter.TryHandle(question) is { } fastPath)
+            return new ChatResult(fastPath.Response, [], "fast-path", fastPath.Intent);
 
         // 2. Cache: repeated questions are answered without any model call.
         if (_cache.TryGet(question, out var cached))
-            return new ChatResult(cached, [], "cache");
+            return new ChatResult(cached.Answer, [], "cache", cached.Topic);
 
         // 3. Retrieve grounding context.
         var sources = await retriever.RetrieveAsync(question, TopK);
@@ -44,16 +55,19 @@ public sealed class RagChatService(IRetriever retriever, IChatCompletionService?
             return new ChatResult(
                 "I couldn't find anything about that in our knowledge base. " +
                 "Please contact support at help.streamco.example for further assistance.",
-                [], "no-context");
+                [], "no-context", "unanswered");
         }
+
+        // Topic detection: the best-matching article's primary tag.
+        var topic = sources[0].Article.Tags.FirstOrDefault() ?? "general";
 
         // Offline mode: no chat model available, return the best article directly.
         if (chat is null)
         {
             var best = sources[0].Article;
-            return new ChatResult(
-                $"[offline mode — best matching article: {best.Title}]\n{best.Content}",
-                sources, "offline-retrieval");
+            var offlineAnswer = $"[offline mode — best matching article: {best.Title}]\n{best.Content}";
+            _cache.Set(question, offlineAnswer, topic);
+            return new ChatResult(offlineAnswer, sources, "offline-retrieval", topic);
         }
 
         // 4. Context-augmented prompt + grounded generation.
@@ -67,7 +81,7 @@ public sealed class RagChatService(IRetriever retriever, IChatCompletionService?
         var reply = await chat.GetChatMessageContentAsync(history);
         var answer = reply.Content ?? "Sorry, I couldn't generate a response. Please try again.";
 
-        _cache.Set(question, answer);
-        return new ChatResult(answer, sources, "rag");
+        _cache.Set(question, answer, topic);
+        return new ChatResult(answer, sources, "rag", topic);
     }
 }
