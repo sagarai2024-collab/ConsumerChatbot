@@ -1,0 +1,62 @@
+[
+  {
+    "id": "KB001",
+    "title": "Subscription plans and pricing",
+    "tags": [ "plans", "pricing", "subscription" ],
+    "content": "StreamCo offers three subscription plans. Basic (₹199/month): SD quality, 1 screen. Standard (₹399/month): Full HD, 2 screens simultaneously. Premium (₹649/month): 4K Ultra HD with HDR, 4 screens simultaneously, and offline downloads on up to 6 devices. All plans include the full content library. Annual billing gives 2 months free on any plan."
+  },
+  {
+    "id": "KB002",
+    "title": "How to reset your password",
+    "tags": [ "password", "login", "account" ],
+    "content": "To reset your StreamCo password: open the app or website, select 'Forgot Password' on the sign-in screen, and enter your registered email or mobile number. A one-time password (OTP) valid for 10 minutes will be sent to you. Enter the OTP and choose a new password of at least 8 characters. If you do not receive the OTP, check your spam folder or wait 60 seconds to request a new one. Resetting the password signs you out of all devices."
+  },
+  {
+    "id": "KB003",
+    "title": "Managing devices and screen limits",
+    "tags": [ "devices", "screens", "limit" ],
+    "content": "The number of simultaneous streams depends on your plan: Basic allows 1, Standard allows 2, and Premium allows 4. You can register unlimited devices, but streaming beyond your screen limit shows the error 'Too many devices are streaming right now.' To free up a slot, stop playback on another device or sign out remotely from Account > Manage Devices. Device deregistration takes effect within 2 minutes."
+  },
+  {
+    "id": "KB004",
+    "title": "Billing dates, payment methods, and failed payments",
+    "tags": [ "billing", "payment", "renewal" ],
+    "content": "StreamCo bills on the same calendar day each month as your original subscription date. Accepted payment methods: UPI, credit/debit cards, and net banking. If a renewal payment fails, we retry twice over 48 hours and send an email and SMS reminder. Your account is paused (not cancelled) after the final failed retry, and streaming resumes instantly once payment succeeds. Update payment methods under Account > Billing."
+  },
+  {
+    "id": "KB005",
+    "title": "Cancelling your subscription",
+    "tags": [ "cancel", "subscription", "account" ],
+    "content": "You can cancel anytime from Account > Subscription > Cancel Plan. Streaming continues until the end of the current billing period; no partial-month charges apply after that. Your watchlist, preferences, and watch history are kept for 10 months after cancellation, so re-subscribing restores everything. Cancelling during a free trial stops billing immediately."
+  },
+  {
+    "id": "KB006",
+    "title": "Refund policy",
+    "tags": [ "refund", "billing", "payment" ],
+    "content": "Refunds are issued for duplicate charges, failed activations where payment was captured, and accidental annual-plan purchases reported within 72 hours. Refunds are processed to the original payment method within 5-7 business days. Monthly plan fees for partially used periods are not refundable. To request a refund, go to Help > Billing Issues > Request Refund with your transaction ID."
+  },
+  {
+    "id": "KB007",
+    "title": "Video quality and buffering troubleshooting",
+    "tags": [ "quality", "buffering", "streaming", "troubleshooting" ],
+    "content": "For 4K streaming StreamCo recommends at least 25 Mbps; Full HD needs 8 Mbps; SD needs 3 Mbps. If you experience buffering: check your internet speed, switch video quality to Auto under Settings > Playback, restart the app, or clear the app cache. Smart TVs older than 2017 may not support 4K HDR playback. Quality also caps at your plan level: Basic streams in SD even on fast connections."
+  },
+  {
+    "id": "KB008",
+    "title": "Parental controls and kids profiles",
+    "tags": [ "parental", "kids", "profiles", "pin" ],
+    "content": "Create a Kids profile from Manage Profiles > Add Profile > Kids. Kids profiles only show content rated U or U/A 7+. To restrict other profiles, set a 4-digit Profile PIN under Account > Parental Controls and choose the maximum maturity rating per profile. PIN is required to switch out of a restricted profile. Viewing restrictions apply across all devices immediately."
+  },
+  {
+    "id": "KB009",
+    "title": "Offline downloads",
+    "tags": [ "downloads", "offline", "premium" ],
+    "content": "Offline downloads are available on the Premium plan for mobile and tablet apps (not web or TV). Each title can be downloaded on up to 6 devices, with a maximum of 100 active downloads per device. Downloads expire 30 days after download, or 48 hours after you first press play. Some titles have download limits set by content partners. Manage storage under Settings > Downloads > Storage."
+  },
+  {
+    "id": "KB010",
+    "title": "Supported devices and platforms",
+    "tags": [ "devices", "platforms", "apps", "compatibility" ],
+    "content": "StreamCo apps are available on Android 8+, iOS 15+, Android TV, Fire TV, Apple TV (tvOS 15+), Samsung Tizen (2018+), LG webOS (2018+), and all modern web browsers (Chrome, Edge, Safari, Firefox). Chromecast and AirPlay are supported on Standard and Premium plans. Gaming consoles are not currently supported."
+  }
+]
