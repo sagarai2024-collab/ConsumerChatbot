@@ -87,3 +87,7 @@ Admin endpoints are left open in this demo to make it easy to explore. The produ
 ## Deployment
 
 The Dockerfile works on any container host. On the free tier of [Render](https://render.com): New → Web Service → connect this repo → Docker. The app honors the `PORT` environment variable automatically.
+
+## Licence
+
+© 2026 Sagarika Chakraborty. All rights reserved, see [LICENSE](LICENSE). Do not copy or reuse without written permission.
